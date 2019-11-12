@@ -24,6 +24,8 @@ DallasTemperature sensors(&oneWire);
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);  // Adafruit ESP8266/32u4/ARM Boards + FeatherWing OLED
 #define BUTTON_NEXT 3
 #define BUTTON_PREV 4
+#define BUTTON_HOURS 11
+#define BUTTON_MINUTES 12
 #define HEIGHT     32
 #define WIDTH      128
 #define debounce  250
@@ -64,8 +66,8 @@ void change_page()
     if (page <= 1) {
       page++;
     }
-    else{
-      page =0;
+    else {
+      page = 0;
     }
   }
 }
@@ -183,6 +185,8 @@ void setup(void)
   attachInterrupt(1, change_page, HIGH);
   pinMode(3, INPUT_PULLUP);
   pinMode(4, INPUT_PULLUP);
+  pinMode(BUTTON_HOURS, INPUT_PULLUP);
+  pinMode(BUTTON_MINUTES, INPUT_PULLUP);
   Serial.begin(9600);
 
 
@@ -205,13 +209,13 @@ void setup(void)
 
   Wire.begin();
   rtc.begin();
-  
-    if (! rtc.isrunning()) {
-      //Serial.println("RTC is NOT running!");
-      // following line sets the RTC to the date & time this sketch was compiled
-      rtc.adjust(DateTime(__DATE__, __TIME__));
-    }
-  
+
+  if (! rtc.isrunning()) {
+    //Serial.println("RTC is NOT running!");
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(__DATE__, __TIME__));
+  }
+
   delay (2000);
 
 
@@ -229,7 +233,8 @@ void loop(void)
 {
   unsigned long currenttime = millis();
   float temp[1];
-
+  byte hours = 0;
+  byte minutes = 0;
 
   //DateTime
   date_now = rtc.now(); //recuperation date du RTC
@@ -256,13 +261,35 @@ void loop(void)
 
       u8g2.setPowerSave(1); //sleep mode
     }
-    if (page == 1) {
-      u8g2.setPowerSave(0); //sleep mode
+    if (page == 0) {
+      u8g2.setPowerSave(0); //remove sleep mode
 
       drawClock();
+      hours = date_now.hour();
+      minutes = date_now.minute();
+
+      if (digitalRead(BUTTON_HOURS) == LOW) {
+        hours ++;
+        hours %= 24;
+
+        date_now = rtc.now(); //recuperation date du RTC
+        date_now.sethour(hours);
+        rtc.adjust(date_now);
+        delay(250);
+      }
+      if (digitalRead(BUTTON_MINUTES) == LOW) {
+        minutes ++;
+        minutes %= 60;
+
+        date_now = rtc.now(); //recuperation date du RTC
+        date_now.setminute(minutes);
+        rtc.adjust(date_now);
+        delay(250);
+      }
+
     }
-    if (page == 0) {
-      u8g2.setPowerSave(0); //sleep mode
+    if (page == 1) {
+      u8g2.setPowerSave(0); //remove sleep mode
       draw(temp[0], 1);
     }
 
